@@ -17,7 +17,9 @@ import (
 	"github.com/mirdate/securegate/internal/auth"
 	"github.com/mirdate/securegate/internal/config"
 	"github.com/mirdate/securegate/internal/db"
+	"github.com/mirdate/securegate/internal/host"
 	"github.com/mirdate/securegate/internal/middleware"
+	"github.com/mirdate/securegate/internal/policy"
 )
 
 func main() {
@@ -50,6 +52,13 @@ func main() {
 		RefreshExpiry: 7 * 24 * time.Hour,
 	})
 
+	// Host + Policy 서비스 초기화
+	hostSvc := host.NewService()
+	policySvc := policy.NewService()
+	policyEngine := policy.NewEngine()
+
+	_ = policyEngine // Step 4~5에서 WebSocket 세션 정책 평가에 사용
+
 	// 초기 관리자 계정 생성
 	if err := authSvc.CreateAdmin(context.Background(), cfg.AdminPass); err != nil {
 		log.Fatalf("초기 관리자 계정 생성 실패: %v", err)
@@ -75,9 +84,11 @@ func main() {
 		authHandler.RegisterRoutes(r)
 	})
 
-	// 인증 필요한 API (Step 3~5에서 추가)
+	// 인증 필요한 API
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(authSvc))
+
+		// 내 정보
 		r.Get("/api/me", func(w http.ResponseWriter, r *http.Request) {
 			userID, _ := auth.GetUserID(r)
 			user, err := authSvc.GetUser(r.Context(), userID)
@@ -87,6 +98,14 @@ func main() {
 			}
 			writeJSON(w, http.StatusOK, user)
 		})
+
+		// 호스트 관리
+		hostHandler := host.NewHandler(hostSvc)
+		r.Route("/api", hostHandler.RegisterRoutes)
+
+		// 정책 관리
+		policyHandler := policy.NewHandler(policySvc)
+		r.Route("/api", policyHandler.RegisterRoutes)
 	})
 
 	// 정적 파일 서빙 (프론트엔드 — 프로덕션에서만)
