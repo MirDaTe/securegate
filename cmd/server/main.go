@@ -100,32 +100,34 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(authSvc))
 
-		// 내 정보
-		r.Get("/api/me", func(w http.ResponseWriter, r *http.Request) {
-			userID, _ := auth.GetUserID(r)
-			user, err := authSvc.GetUser(r.Context(), userID)
-			if err != nil {
-				writeJSON(w, http.StatusNotFound, map[string]string{"error": "사용자를 찾을 수 없습니다"})
-				return
-			}
-			writeJSON(w, http.StatusOK, user)
+		r.Route("/api", func(r chi.Router) {
+			// 내 정보
+			r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
+				userID, _ := auth.GetUserID(r)
+				user, err := authSvc.GetUser(r.Context(), userID)
+				if err != nil {
+					writeJSON(w, http.StatusNotFound, map[string]string{"error": "사용자를 찾을 수 없습니다"})
+					return
+				}
+				writeJSON(w, http.StatusOK, user)
+			})
+
+			// 호스트 관리
+			hostHandler := host.NewHandler(hostSvc)
+			hostHandler.RegisterRoutes(r)
+
+			// 정책 관리
+			policyHandler := policy.NewHandler(policySvc)
+			policyHandler.RegisterRoutes(r)
+
+			// 세션 관리
+			sessionHandler := session.NewHandler(sessionMgr)
+			sessionHandler.RegisterRoutes(r)
+
+			// 감사 로그
+			auditHandler := audit.NewHandler(auditLogger)
+			auditHandler.RegisterRoutes(r)
 		})
-
-		// 호스트 관리
-		hostHandler := host.NewHandler(hostSvc)
-		r.Route("/api", hostHandler.RegisterRoutes)
-
-		// 정책 관리
-		policyHandler := policy.NewHandler(policySvc)
-		r.Route("/api", policyHandler.RegisterRoutes)
-
-		// 세션 관리
-		sessionHandler := session.NewHandler(sessionMgr)
-		r.Route("/api", sessionHandler.RegisterRoutes)
-
-		// 감사 로그
-		auditHandler := audit.NewHandler(auditLogger)
-		r.Route("/api", auditHandler.RegisterRoutes)
 	})
 
 	// WebSocket (토큰 인증 — HTTP 엔드포인트에서 검증 후 업그레이드)
