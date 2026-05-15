@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/mirdate/securegate/internal/audit"
 	"github.com/mirdate/securegate/internal/auth"
 	"github.com/mirdate/securegate/internal/config"
 	"github.com/mirdate/securegate/internal/db"
@@ -63,6 +64,9 @@ func main() {
 	sessionMgr := session.NewManager()
 	relayHub := relay.NewHub()
 	wsHandler := relay.NewWSHandler(relayHub, sessionMgr)
+
+	// Audit Logger 초기화
+	auditLogger := audit.NewLogger()
 
 	_ = policyEngine // Step 4~5에서 WebSocket 세션 정책 평가에 사용
 	_ = relayHub     // 릴레이 시작 시 사용
@@ -118,6 +122,10 @@ func main() {
 		// 세션 관리
 		sessionHandler := session.NewHandler(sessionMgr)
 		r.Route("/api", sessionHandler.RegisterRoutes)
+
+		// 감사 로그
+		auditHandler := audit.NewHandler(auditLogger)
+		r.Route("/api", auditHandler.RegisterRoutes)
 	})
 
 	// WebSocket (토큰 인증 — HTTP 엔드포인트에서 검증 후 업그레이드)
