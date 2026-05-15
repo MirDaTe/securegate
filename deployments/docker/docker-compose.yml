@@ -1,0 +1,94 @@
+# SecureGate Docker Compose — 망분리 환경용 원격 데스크톱 게이트웨이
+
+services:
+  # PostgreSQL 15 — 메인 데이터베이스
+  postgres:
+    image: postgres:15-alpine
+    container_name: securegate-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-securegate}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-securegate}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-securegate} -d ${DB_NAME:-securegate}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis 7 — 세션/캐시
+  redis:
+    image: redis:7-alpine
+    container_name: securegate-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # SecureGate API 서버 (Go)
+  server:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.server
+    container_name: securegate-server
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-securegate}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-securegate}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-admin-first-login-change-me}
+      SERVE_STATIC: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MIGRATIONS_DIR: "/app/migrations"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./migrations:/app/migrations:ro
+      - sessions_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Nginx — TLS 종단 + 리버스 프록시
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: securegate-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployments/docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # TLS 인증서 마운트
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
+  redis_data:
+  sessions_data:

@@ -1,0 +1,37 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+*.test
+*.out
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 환경변수 (실제 값 포함 금지)
+.env
+
+# Node.js
+web/node_modules/
+web/dist/
+
+# SSL 인증서
+ssl/
+
+# 세션 데이터/녹화
+sessions_data/
+
+# 로그
+*.log

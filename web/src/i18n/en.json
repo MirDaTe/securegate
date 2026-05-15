@@ -1,0 +1,60 @@
+{
+  "common": {
+    "appName": "SecureGate",
+    "login": "Login",
+    "logout": "Logout",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "confirm": "Confirm"
+  },
+  "auth": {
+    "username": "Username",
+    "password": "Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "loginTitle": "Login to SecureGate",
+    "loginButton": "Login",
+    "signupLink": "Sign Up",
+    "forgotPassword": "Forgot your password?",
+    "changePasswordTitle": "Change Password",
+    "changePasswordRequired": "First login. Please change your password.",
+    "mfaTitle": "Two-Factor Authentication",
+    "mfaCode": "Authentication Code",
+    "mfaVerify": "Verify",
+    "logoutConfirm": "Are you sure you want to logout?"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "myHosts": "My Hosts",
+    "recentSessions": "Recent Sessions",
+    "favorites": "Favorites",
+    "noHosts": "No hosts available",
+    "connect": "Connect"
+  },
+  "session": {
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "terminate": "Terminate",
+    "clipboard": "Clipboard",
+    "fileTransfer": "File Transfer",
+    "keyboardSettings": "Keyboard Settings",
+    "imeIndicator": "IME Status",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen"
+  },
+  "policy": {
+    "denied": "Blocked by policy",
+    "clipboardDenied": "Clipboard access denied",
+    "fileUploadDenied": "File upload denied",
+    "fileDownloadDenied": "File download denied"
+  }
+}
