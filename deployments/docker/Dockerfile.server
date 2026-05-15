@@ -5,12 +5,10 @@ RUN apk add --no-cache git
 
 WORKDIR /build
 
-# go.mod만 복사 → go.sum 자동 생성 (체크섬 불일치 방지)
-COPY go.mod ./
-RUN go mod tidy
-RUN go mod download
-
+# 소스를 먼저 전부 복사한 후 go mod tidy 실행 (모든 import 해석 가능)
 COPY . .
+RUN go mod tidy
+
 RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 
 # Stage 2: 경량 실행 이미지
