@@ -5,8 +5,9 @@ RUN apk add --no-cache git
 
 WORKDIR /build
 
-# 의존성 다운로드 레이어 캐싱
-COPY go.mod go.sum ./
+# go.mod만 복사 → go.sum 자동 생성 (체크섬 불일치 방지)
+COPY go.mod ./
+RUN go mod tidy
 RUN go mod download
 
 COPY . .
@@ -17,7 +18,6 @@ FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates tzdata
 
-# 비root 사용자 생성 (보안)
 RUN addgroup -g 1000 securegate && \
     adduser -D -u 1000 -G securegate securegate
 
