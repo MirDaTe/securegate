@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/mirdate/securegate/internal/auth"
 	"github.com/mirdate/securegate/internal/config"
 	"github.com/mirdate/securegate/internal/db"
 	"github.com/mirdate/securegate/internal/middleware"
@@ -41,6 +43,19 @@ func main() {
 		log.Fatalf("DB 마이그레이션 실패: %v", err)
 	}
 
+	// Auth 서비스 초기화
+	authSvc := auth.NewService(auth.JWTConfig{
+		Secret:        cfg.JWTSecret,
+		AccessExpiry:  15 * time.Minute,
+		RefreshExpiry: 7 * 24 * time.Hour,
+	})
+
+	// 초기 관리자 계정 생성
+	if err := authSvc.CreateAdmin(context.Background(), cfg.AdminPass); err != nil {
+		log.Fatalf("초기 관리자 계정 생성 실패: %v", err)
+	}
+	log.Println("초기 관리자 계정 확인 완료 (admin)")
+
 	// 라우터 설정
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -51,32 +66,30 @@ func main() {
 	r.Use(middleware.RateLimitMiddleware)
 	r.Use(chimw.Recoverer)
 
-	// 헬스 체크
-	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		err := db.Ping()
-		if err != nil {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{
-				"status": "unhealthy",
-				"db":     fmt.Sprintf("error: %v", err),
-			})
-			return
-		}
+	// 공개 엔드포인트
+	r.Get("/api/health", healthHandler)
 
-		redisErr := db.PingRedis()
-		redisStatus := "connected"
-		if redisErr != nil {
-			redisStatus = fmt.Sprintf("error: %v", redisErr)
-		}
+	// 인증 엔드포인트 (로그인, 회원가입 등)
+	authHandler := auth.NewHandler(authSvc)
+	r.Route("/api", func(r chi.Router) {
+		authHandler.RegisterRoutes(r)
+	})
 
-		writeJSON(w, http.StatusOK, map[string]string{
-			"status": "ok",
-			"db":     "connected",
-			"redis":  redisStatus,
+	// 인증 필요한 API (Step 3~5에서 추가)
+	r.Group(func(r chi.Router) {
+		r.Use(auth.Middleware(authSvc))
+		r.Get("/api/me", func(w http.ResponseWriter, r *http.Request) {
+			userID, _ := auth.GetUserID(r)
+			user, err := authSvc.GetUser(r.Context(), userID)
+			if err != nil {
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": "사용자를 찾을 수 없습니다"})
+				return
+			}
+			writeJSON(w, http.StatusOK, user)
 		})
 	})
 
 	// 정적 파일 서빙 (프론트엔드 — 프로덕션에서만)
-	// 개발 중에는 Vite dev server (port 5173) 사용
 	if cfg.ServeStatic {
 		fileServer := http.FileServer(http.Dir("./web/dist"))
 		r.Handle("/*", fileServer)
@@ -110,12 +123,31 @@ func main() {
 	}
 }
 
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	err := db.Ping()
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "unhealthy",
+			"db":     fmt.Sprintf("error: %v", err),
+		})
+		return
+	}
+
+	redisErr := db.PingRedis()
+	redisStatus := "connected"
+	if redisErr != nil {
+		redisStatus = fmt.Sprintf("error: %v", redisErr)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "ok",
+		"db":     "connected",
+		"redis":  redisStatus,
+	})
+}
+
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"status":"%s","db":"%s","redis":"%s"}`,
-		data.(map[string]string)["status"],
-		data.(map[string]string)["db"],
-		data.(map[string]string)["redis"],
-	)
+	json.NewEncoder(w).Encode(data)
 }

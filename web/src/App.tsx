@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import LoginPage from '@/pages/LoginPage';
+import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import SessionPage from '@/pages/SessionPage';
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -18,6 +19,12 @@ function App() {
       <Routes>
         {/* 공개 라우트 */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* 비밀번호 강제 변경 (토큰 필요) */}
+        <Route
+          path="/change-password"
+          element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>}
+        />
 
         {/* 인증 필요 라우트 */}
         <Route
