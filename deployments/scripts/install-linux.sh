@@ -35,12 +35,10 @@ echo -e "${GREEN}  OK TLS 인증서 확인 완료${NC}"
 # ─── 3. 환경변수 ───
 echo -e "${YELLOW}[3/5] 환경변수...${NC}"
 
-# 이전 실행 실패로 깨진 .env가 남아있을 수 있음 → 재생성
 NEED_REGENERATE=false
 if [ ! -f ".env" ]; then
     NEED_REGENERATE=true
 elif grep -q "INITIAL_ADMIN_PASSWORD=.\{0,3\}$" .env 2>/dev/null; then
-    # 비밀번호가 없거나 3자 이하이면 깨진 것
     NEED_REGENERATE=true
 elif grep -q "JWT_SECRET=change-me" .env 2>/dev/null; then
     NEED_REGENERATE=true
@@ -69,8 +67,9 @@ else
     echo -e "${GREEN}  OK .env 파일 확인 완료${NC}"
 fi
 
-# ─── 4. 실행 ───
+# ─── 4. 실행 (--no-cache로 Docker 빌드 캐시 무시) ───
 echo -e "${YELLOW}[4/5] SecureGate 실행...${NC}"
+docker compose build --no-cache server
 docker compose up -d
 
 # ─── 5. 완료 ───

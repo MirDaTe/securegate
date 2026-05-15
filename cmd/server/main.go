@@ -68,8 +68,8 @@ func main() {
 	// Audit Logger 초기화
 	auditLogger := audit.NewLogger()
 
-	_ = policyEngine // Step 4~5에서 WebSocket 세션 정책 평가에 사용
-	_ = relayHub     // 릴레이 시작 시 사용
+	_ = policyEngine // Session policy evaluation point
+	_ = relayHub     // Relay lifecycle
 
 	// 초기 관리자 계정 생성
 	if err := authSvc.CreateAdmin(context.Background(), cfg.AdminPass); err != nil {
