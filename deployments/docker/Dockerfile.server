@@ -1,13 +1,16 @@
 # Stage 1: Go 빌드
 FROM golang:1.22-alpine AS builder
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates
 
 WORKDIR /build
 
-# 소스를 먼저 전부 복사한 후 go mod tidy 실행 (모든 import 해석 가능)
+# 모든 소스를 복사
 COPY . .
-RUN go mod tidy
+
+# go.sum이 있을 경우 삭제 (잘못된 체크섬 방지)
+# 그 다음 go mod tidy로 새로 생성
+RUN rm -f go.sum && go mod tidy
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 
