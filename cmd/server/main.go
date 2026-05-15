@@ -20,6 +20,8 @@ import (
 	"github.com/mirdate/securegate/internal/host"
 	"github.com/mirdate/securegate/internal/middleware"
 	"github.com/mirdate/securegate/internal/policy"
+	"github.com/mirdate/securegate/internal/relay"
+	"github.com/mirdate/securegate/internal/session"
 )
 
 func main() {
@@ -57,7 +59,13 @@ func main() {
 	policySvc := policy.NewService()
 	policyEngine := policy.NewEngine()
 
+	// Session + Relay 서비스 초기화
+	sessionMgr := session.NewManager()
+	relayHub := relay.NewHub()
+	wsHandler := relay.NewWSHandler(relayHub, sessionMgr)
+
 	_ = policyEngine // Step 4~5에서 WebSocket 세션 정책 평가에 사용
+	_ = relayHub     // 릴레이 시작 시 사용
 
 	// 초기 관리자 계정 생성
 	if err := authSvc.CreateAdmin(context.Background(), cfg.AdminPass); err != nil {
@@ -106,7 +114,15 @@ func main() {
 		// 정책 관리
 		policyHandler := policy.NewHandler(policySvc)
 		r.Route("/api", policyHandler.RegisterRoutes)
+
+		// 세션 관리
+		sessionHandler := session.NewHandler(sessionMgr)
+		r.Route("/api", sessionHandler.RegisterRoutes)
 	})
+
+	// WebSocket (토큰 인증 — HTTP 엔드포인트에서 검증 후 업그레이드)
+	r.Get("/ws/session/{sessionId}", wsHandler.ServeWS)
+	r.Get("/ws/session/{sessionId}/", wsHandler.ServeWS)
 
 	// 정적 파일 서빙 (프론트엔드 — 프로덕션에서만)
 	if cfg.ServeStatic {
