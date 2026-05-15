@@ -4,6 +4,8 @@ FROM golang:1.22-alpine AS builder
 RUN apk add --no-cache git
 
 WORKDIR /build
+
+# 의존성 다운로드 레이어 캐싱
 COPY go.mod go.sum ./
 RUN go mod download
 
