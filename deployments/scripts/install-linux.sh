@@ -34,23 +34,29 @@ echo -e "${GREEN}  OK TLS 인증서 확인 완료${NC}"
 
 # ─── 3. 환경변수 ───
 echo -e "${YELLOW}[3/5] 환경변수...${NC}"
+
+# 이전 실행 실패로 깨진 .env가 남아있을 수 있음 → 재생성
+NEED_REGENERATE=false
 if [ ! -f ".env" ]; then
+    NEED_REGENERATE=true
+elif grep -q "INITIAL_ADMIN_PASSWORD=.\{0,3\}$" .env 2>/dev/null; then
+    # 비밀번호가 없거나 3자 이하이면 깨진 것
+    NEED_REGENERATE=true
+elif grep -q "JWT_SECRET=change-me" .env 2>/dev/null; then
+    NEED_REGENERATE=true
+fi
+
+if [ "$NEED_REGENERATE" = true ]; then
+    [ -f ".env" ] && rm -f .env
     cp .env.example .env
 
-    # -hex 사용: 0-9a-f만 포함 → sed 구분자와 충돌 없음
     ADMIN_PASS=$(openssl rand -hex 12)
     JWT_SECRET=$(openssl rand -hex 32)
     DB_PASS=$(openssl rand -hex 12)
 
-    # sed_inplace: macOS(SEDOPT='') / Linux(SEDOPT='') 자동 감지
-    SEDOPT=""
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        SEDOPT=""
-    fi
-
-    sed -i${SEDOPT} "s|^INITIAL_ADMIN_PASSWORD=.*|INITIAL_ADMIN_PASSWORD=${ADMIN_PASS}|" .env
-    sed -i${SEDOPT} "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" .env
-    sed -i${SEDOPT} "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASS}|" .env
+    sed -i "s|^INITIAL_ADMIN_PASSWORD=.*|INITIAL_ADMIN_PASSWORD=${ADMIN_PASS}|" .env
+    sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" .env
+    sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASS}|" .env
 
     echo ""
     echo "  ────────────────────────────────────"
@@ -60,14 +66,14 @@ if [ ! -f ".env" ]; then
     echo "  (최초 로그인 시 비밀번호 변경 필수)"
     echo "  ────────────────────────────────────"
 else
-    echo -e "${GREEN}  OK .env 파일이 이미 존재합니다${NC}"
+    echo -e "${GREEN}  OK .env 파일 확인 완료${NC}"
 fi
 
 # ─── 4. 실행 ───
 echo -e "${YELLOW}[4/5] SecureGate 실행...${NC}"
-docker compose -f deployments/docker/docker-compose.yml up -d
+docker compose up -d
 
 # ─── 5. 완료 ───
 echo ""
 echo -e "${GREEN}설치 완료! https://localhost 로 접속하세요${NC}"
-echo "로그: docker compose -f deployments/docker/docker-compose.yml logs -f"
+echo "로그: docker compose logs -f"
