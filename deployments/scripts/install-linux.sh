@@ -36,12 +36,22 @@ echo -e "${GREEN}  OK TLS 인증서 확인 완료${NC}"
 echo -e "${YELLOW}[3/5] 환경변수...${NC}"
 if [ ! -f ".env" ]; then
     cp .env.example .env
-    ADMIN_PASS=$(openssl rand -base64 16)
-    JWT_SECRET=$(openssl rand -base64 48)
-    sed -i '' "s/INITIAL_ADMIN_PASSWORD=.*/INITIAL_ADMIN_PASSWORD=$ADMIN_PASS/" .env 2>/dev/null || \
-    sed -i "s/INITIAL_ADMIN_PASSWORD=.*/INITIAL_ADMIN_PASSWORD=$ADMIN_PASS/" .env
-    sed -i '' "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env 2>/dev/null || \
-    sed -i "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
+
+    # -hex 사용: 0-9a-f만 포함 → sed 구분자와 충돌 없음
+    ADMIN_PASS=$(openssl rand -hex 12)
+    JWT_SECRET=$(openssl rand -hex 32)
+    DB_PASS=$(openssl rand -hex 12)
+
+    # sed_inplace: macOS(SEDOPT='') / Linux(SEDOPT='') 자동 감지
+    SEDOPT=""
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        SEDOPT=""
+    fi
+
+    sed -i${SEDOPT} "s|^INITIAL_ADMIN_PASSWORD=.*|INITIAL_ADMIN_PASSWORD=${ADMIN_PASS}|" .env
+    sed -i${SEDOPT} "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" .env
+    sed -i${SEDOPT} "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASS}|" .env
+
     echo ""
     echo "  ────────────────────────────────────"
     echo "  초기 관리자 로그인 정보"
@@ -49,6 +59,8 @@ if [ ! -f ".env" ]; then
     echo "  PW: $ADMIN_PASS"
     echo "  (최초 로그인 시 비밀번호 변경 필수)"
     echo "  ────────────────────────────────────"
+else
+    echo -e "${GREEN}  OK .env 파일이 이미 존재합니다${NC}"
 fi
 
 # ─── 4. 실행 ───
