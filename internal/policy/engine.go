@@ -44,7 +44,7 @@ func (e *Engine) Evaluate(ctx context.Context, sc SessionContext) *PolicyDecisio
 		}
 	}
 
-	decision = PolicyDecision{
+	*decision = PolicyDecision{
 		SessionAllowed:       p.Enabled,
 		ClipboardMode:        p.ClipboardMode,
 		FileUploadAllowed:    p.FileUploadEnabled,
@@ -57,7 +57,7 @@ func (e *Engine) Evaluate(ctx context.Context, sc SessionContext) *PolicyDecisio
 		IdleTimeoutMinutes:   p.IdleTimeoutMinutes,
 	}
 
-	return &decision
+	return decision
 }
 
 // CheckClipboard — 클립보드 작업 허용 여부

@@ -129,7 +129,7 @@ func (m *Manager) GetSession(ctx context.Context, id uuid.UUID) (*Session, error
 	var s Session
 	var policyID *uuid.UUID
 	var clientIP, wsTokenHash, recordingPath, detectedOS, detectedOSVer *string
-	var endedAt, lastDetected *time.Time
+	var endedAt *time.Time
 
 	err := m.pool.QueryRow(ctx,
 		`SELECT id,user_id,host_id,policy_id,started_at,ended_at,status,client_ip,ws_token_hash,
