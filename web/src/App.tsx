@@ -5,6 +5,7 @@ import LoginPage from '@/pages/LoginPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import SessionPage from '@/pages/SessionPage';
+import RdpSessionPage from '@/pages/RdpSessionPage';
 import AdminLayout from '@/components/layout/AdminLayout';
 
 // 관리자 콘솔 페이지 (Lazy load — Step 8에서 구현)
