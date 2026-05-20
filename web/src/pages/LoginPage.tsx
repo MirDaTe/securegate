@@ -37,7 +37,11 @@ export default function LoginPage() {
 
       if (data.require_password_change) {
         // 비밀번호 강제 변경 필요 → 토큰 저장 후 변경 페이지로
-        login(data.user, data.access_token, data.refresh_token);
+        // snake_case → camelCase 변환
+        login({
+          ...data.user,
+          mustChangePassword: data.user.must_change_password,
+        }, data.access_token, data.refresh_token);
         navigate('/change-password');
         return;
       }
@@ -69,7 +73,10 @@ export default function LoginPage() {
       const data = resp.data;
 
       if (data.require_password_change) {
-        login(data.user, data.access_token, data.refresh_token);
+        login({
+          ...data.user,
+          mustChangePassword: data.user.must_change_password,
+        }, data.access_token, data.refresh_token);
         navigate('/change-password');
         return;
       }
