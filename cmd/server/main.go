@@ -93,14 +93,16 @@ func main() {
 	// 인증 엔드포인트 (로그인, 회원가입 등)
 	authHandler := auth.NewHandler(authSvc)
 	r.Route("/api", func(r chi.Router) {
-		authHandler.RegisterRoutes(r)
-	})
+		// 인증 불필요 라우트 (로그인, 회원가입, 토큰 갱신)
+		authHandler.RegisterPublicRoutes(r)
 
-	// 인증 필요한 API
-	r.Group(func(r chi.Router) {
-		r.Use(auth.Middleware(authSvc))
+		// 인증 필요 라우트
+		r.Group(func(r chi.Router) {
+			r.Use(auth.Middleware(authSvc))
 
-		r.Route("/api", func(r chi.Router) {
+			// 인증 핸들러 (로그아웃, 비밀번호 변경, MFA)
+			authHandler.RegisterProtectedRoutes(r)
+
 			// 내 정보
 			r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
 				userID, _ := auth.GetUserID(r)
@@ -136,8 +138,15 @@ func main() {
 
 	// 정적 파일 서빙 (프론트엔드 — 프로덕션에서만)
 	if cfg.ServeStatic {
-		fileServer := http.FileServer(http.Dir("./web/dist"))
-		r.Handle("/*", fileServer)
+		fs := http.FileServer(http.Dir("./web/dist"))
+		r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// SPA fallback: 실제 파일이 없으면 index.html로
+			path := "./web/dist" + r.URL.Path
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				r.URL.Path = "/"
+			}
+			fs.ServeHTTP(w, r)
+		}))
 	}
 
 	// 서버 시작

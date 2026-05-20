@@ -18,17 +18,21 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-// RegisterRoutes — 라우터에 인증 엔드포인트 등록
-func (h *Handler) RegisterRoutes(r chi.Router) {
+// RegisterPublicRoutes — 인증 불필요 라우트 (로그인, 회원가입, 토큰 갱신)
+func (h *Handler) RegisterPublicRoutes(r chi.Router) {
 	r.Post("/auth/login", h.Login)
 	r.Post("/auth/signup", h.Signup)
+	r.Post("/auth/refresh", h.RefreshToken)
+}
+
+// RegisterProtectedRoutes — 인증 필요 라우트 (로그아웃, 비밀번호 변경, MFA)
+func (h *Handler) RegisterProtectedRoutes(r chi.Router) {
 	r.Post("/auth/logout", h.Logout)
 	r.Post("/auth/password/change", h.ChangePassword)
 	r.Post("/auth/mfa/setup", h.SetupMFA)
 	r.Post("/auth/mfa/verify", h.VerifyMFA)
 	r.Post("/auth/mfa/enable", h.EnableMFA)
 	r.Post("/auth/mfa/disable", h.DisableMFA)
-	r.Post("/auth/refresh", h.RefreshToken)
 }
 
 // Login — POST /api/auth/login
